@@ -106,12 +106,11 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBackToDashboard }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scrollSectionRef = useRef<HTMLDivElement>(null);
   const hardwareScrollRef = useRef<HTMLDivElement>(null);
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
 
   // Direct DOM refs for HUD elements (prevents React re-renders during scroll)
+  // Direct DOM ref for HUD progress bar (prevents React re-renders during scroll)
   const progressBarRef = useRef<HTMLDivElement>(null);
-  const phaseBadgeRef = useRef<HTMLSpanElement>(null);
-  const phaseTitleRef = useRef<HTMLHeadingElement>(null);
-  const phaseSubtitleRef = useRef<HTMLParagraphElement>(null);
 
   // State
   const [activeSection, setActiveSection] = useState<string>('section-hero');
@@ -131,6 +130,16 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBackToDashboard }) => {
   const currentProgressRef = useRef<number>(0);
   const rafIdRef = useRef<number | null>(null);
   const lastDrawnFrameRef = useRef<number>(-1);
+  const isNavigatingRef = useRef<boolean>(false);
+
+  // Ensure hero video autoplays smoothly
+  useEffect(() => {
+    if (heroVideoRef.current) {
+      heroVideoRef.current.play().catch(err => {
+        console.warn("Autoplay was prevented on hero video:", err);
+      });
+    }
+  }, []);
 
   // Preload a single frame
   const loadFrame = useCallback((index: number): Promise<HTMLImageElement | null> => {
@@ -225,53 +234,27 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBackToDashboard }) => {
   }, [drawFrame]);
 
   // Phase Info Helper
-  const getPhaseData = (progress: number) => {
-    if (progress < 0.20) {
-      return {
-        badge: 'Phase 01',
-        title: 'Farmer Books Scan',
-        subtitle: 'Effortless on-demand booking from the mobile app without equipment investment.'
-      };
-    } else if (progress < 0.40) {
-      return {
-        badge: 'Phase 02',
-        title: 'Autonomous Mission Planning',
-        subtitle: 'Intelligent Pixhawk flight grid calculation & battery safety envelope.'
-      };
-    } else if (progress < 0.60) {
-      return {
-        badge: 'Phase 03',
-        title: 'Coarse-to-Fine Edge AI Scan',
-        subtitle: 'High-altitude anomaly survey followed by low-altitude close-up inspection.'
-      };
-    } else if (progress < 0.80) {
-      return {
-        badge: 'Phase 04',
-        title: 'Expert Human Verification',
-        subtitle: 'Certified operator reviews AI findings before delivering recommendations.'
-      };
-    } else {
-      return {
-        badge: 'Phase 05',
-        title: 'Native-Language Spoken Report',
-        subtitle: 'Dialect-aware audio advisory and geotagged prescription delivered directly to the farmer.'
-      };
-    }
-  };
-
-  // Smooth RAF Scrubber Loop (0.09 factor for snappy yet silky response)
+  // Smooth RAF Scrubber Loop with capped speed so fast scrolls never skip frames
   useEffect(() => {
     let isRunning = true;
 
     const loop = () => {
       if (!isRunning) return;
 
-      // Ultra-smooth dampened LERP interpolation with crisp snap on settle
+      // Smooth step towards targetProgress with capped speed per tick for silky fluid animation
       const diff = targetProgressRef.current - currentProgressRef.current;
-      if (Math.abs(diff) < 0.0005) {
+      const absDiff = Math.abs(diff);
+
+      if (absDiff < 0.0008) {
         currentProgressRef.current = targetProgressRef.current;
       } else {
-        currentProgressRef.current += diff * 0.06;
+        // Balanced, butter-smooth easing:
+        // Responsive speed that tracks scroll tightly while keeping every frame transition silky
+        const lerpSpeed = 0.16;
+        const minStep = 0.003;
+        const maxStep = 0.024;
+        const calculatedStep = Math.max(minStep, Math.min(absDiff * lerpSpeed, maxStep));
+        currentProgressRef.current += Math.sign(diff) * Math.min(absDiff, calculatedStep);
       }
 
       const progress = Math.max(0, Math.min(1, currentProgressRef.current));
@@ -285,19 +268,9 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBackToDashboard }) => {
         drawFrame(frameIndex);
         lastDrawnFrameRef.current = frameIndex;
 
-        // Update DOM Direct HUD
-        const phase = getPhaseData(progress);
-        if (phaseBadgeRef.current) phaseBadgeRef.current.innerText = phase.badge;
-        if (phaseTitleRef.current) phaseTitleRef.current.innerText = phase.title;
-        if (phaseSubtitleRef.current) phaseSubtitleRef.current.innerText = phase.subtitle;
-        if (progressBarRef.current) progressBarRef.current.style.width = `${(progress * 100).toFixed(1)}%`;
-
-        // Lookahead Preloader
-        for (let i = 1; i <= 8; i++) {
-          const idx = frameIndex + i;
-          if (idx >= 0 && idx < TOTAL_FRAMES && !isLoadedRef.current[idx]) {
-            loadFrame(idx);
-          }
+        // Update Minimal Progress Bar Only
+        if (progressBarRef.current) {
+          progressBarRef.current.style.width = `${(progress * 100).toFixed(1)}%`;
         }
       }
 
@@ -312,36 +285,37 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBackToDashboard }) => {
         cancelAnimationFrame(rafIdRef.current);
       }
     };
-  }, [drawFrame, loadFrame]);
+  }, [drawFrame]);
 
-  // Initial Batch Load
+  // High-Speed Preloader for all 299 frames
   useEffect(() => {
     let isMounted = true;
 
     const init = async () => {
-      const initialBatch = [];
-      for (let i = 0; i < Math.min(30, TOTAL_FRAMES); i++) {
-        initialBatch.push(loadFrame(i));
-      }
-      await Promise.all(initialBatch);
+      // 1. Immediately preload the first 50 frames (0 to 49) upfront.
+      // Guarantees zero glitch/freeze when the user enters the section and starts scrolling.
+      const initialFrames = Array.from({ length: 50 }, (_, i) => i);
+      await Promise.all(initialFrames.map(idx => loadFrame(idx)));
 
       if (!isMounted) return;
       handleResize();
       drawFrame(0);
 
-      let nextIdx = 30;
-      const loadNext = async () => {
-        if (!isMounted || nextIdx >= TOTAL_FRAMES) return;
-        const chunk = [];
-        for (let k = 0; k < 8 && nextIdx < TOTAL_FRAMES; k++, nextIdx++) {
-          chunk.push(loadFrame(nextIdx));
-        }
-        await Promise.all(chunk);
-        if (isMounted) {
-          setTimeout(loadNext, 25);
+      // 2. High-speed concurrent loader for all remaining frames (50 to 298)
+      const concurrency = 20;
+      const remainingFrames = Array.from({ length: TOTAL_FRAMES - 50 }, (_, i) => i + 50);
+      let nextFrameIdx = 0;
+
+      const worker = async () => {
+        while (nextFrameIdx < remainingFrames.length && isMounted) {
+          const idx = remainingFrames[nextFrameIdx++];
+          if (!imagesArrayRef.current[idx]) {
+            await loadFrame(idx);
+          }
         }
       };
-      loadNext();
+
+      await Promise.all(Array.from({ length: concurrency }, () => worker()));
     };
 
     init();
@@ -353,7 +327,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBackToDashboard }) => {
     };
   }, [loadFrame, handleResize, drawFrame]);
 
-  // Main Page Scroll Handler
+  // Main Page Scroll Handler with Sticky Timeline & Two-Way Boundary Guards
   const handleScroll = () => {
     const container = containerRef.current;
     if (!container) return;
@@ -363,21 +337,37 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBackToDashboard }) => {
     const overallProgress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
     setPageScrollPercent(overallProgress);
 
-    // Exact timeline pinning & scrubbing calculation
+    // Timeline Scrubbing & Boundary Safeguards
     const sec = scrollSectionRef.current;
     if (sec) {
       const secTop = sec.offsetTop;
-      const secHeight = sec.offsetHeight;
-      const vh = container.clientHeight || window.innerHeight;
-      const scrollableDistance = secHeight - vh;
+      const clientHeight = container.clientHeight;
+      const scrollDistance = sec.offsetHeight - clientHeight;
 
-      if (scrollTop < secTop) {
-        targetProgressRef.current = 0;
-      } else if (scrollTop >= secTop + scrollableDistance) {
-        targetProgressRef.current = 1;
-      } else if (scrollableDistance > 0) {
-        const scrolled = scrollTop - secTop;
-        targetProgressRef.current = Math.min(1, Math.max(0, scrolled / scrollableDistance));
+      if (scrollDistance > 0) {
+        if (scrollTop < secTop) {
+          // Above timeline (in Hero section)
+          targetProgressRef.current = 0;
+          // Upward boundary guard:
+          // If scrolling up out of timeline but reverse animation hasn't finished (progress > 0.02),
+          // hold at secTop until drone returns to start frame.
+          if (!isNavigatingRef.current && currentProgressRef.current > 0.02 && scrollTop > secTop - 100) {
+            container.scrollTop = secTop;
+          }
+        } else if (scrollTop >= secTop + scrollDistance) {
+          // Below timeline (in Problem/Phases sections)
+          targetProgressRef.current = 1;
+          // Downward boundary guard:
+          // If scrolling down past timeline but flight hasn't finished (progress < 0.98),
+          // hold at end of timeline until drone completes scan.
+          if (!isNavigatingRef.current && currentProgressRef.current < 0.98 && scrollTop < secTop + scrollDistance + 100) {
+            container.scrollTop = secTop + scrollDistance;
+          }
+        } else {
+          // Inside timeline: 100% natural, linear mapping of scroll distance to animation frames
+          const rawProgress = (scrollTop - secTop) / scrollDistance;
+          targetProgressRef.current = Math.max(0, Math.min(1, rawProgress));
+        }
       }
     }
 
@@ -398,10 +388,24 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBackToDashboard }) => {
   const scrollToSection = (sectionId: string) => {
     const el = document.getElementById(sectionId);
     if (el && containerRef.current) {
+      isNavigatingRef.current = true;
       const top = el.offsetTop - 80;
       containerRef.current.scrollTo({ top, behavior: 'smooth' });
       setActiveSection(sectionId);
       setMobileMenuOpen(false);
+
+      // If user directly clicked a section past the timeline, set timeline to complete
+      if (sectionId !== 'section-hero' && sectionId !== 'section-timeline') {
+        targetProgressRef.current = 1;
+        currentProgressRef.current = 1;
+      } else if (sectionId === 'section-hero') {
+        targetProgressRef.current = 0;
+        currentProgressRef.current = 0;
+      }
+
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 950);
     }
   };
 
@@ -460,11 +464,11 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBackToDashboard }) => {
     <div 
       ref={containerRef}
       onScroll={handleScroll}
-      className="h-screen w-full overflow-y-auto overflow-x-hidden bg-[#F6F7F3] text-[#192118] font-sans selection:bg-[#1E2B1D] selection:text-white relative scroll-smooth"
+      className="h-screen w-full overflow-y-auto overflow-x-hidden bg-[#F6F7F3] text-[#192118] font-sans selection:bg-[#1E2B1D] selection:text-white relative"
     >
-      {/* 1. TOP FLOATING CAPSULE GLASSMORPHIC NAVBAR (NO DASHBOARD BUTTON, DIRECT GITHUB CTA) */}
-      <div className="sticky top-4 z-50 w-full px-3 sm:px-6 flex justify-center pointer-events-none">
-        <header className="pointer-events-auto w-full max-w-7xl bg-white/75 backdrop-blur-2xl border border-white/70 shadow-xl hover:shadow-2xl rounded-full px-4 sm:px-7 py-2.5 flex items-center justify-between transition-all duration-300">
+      {/* 1. TOP FLOATING CAPSULE GLASSMORPHIC NAVBAR */}
+      <div className="fixed top-4 left-0 right-0 z-50 w-full px-3 sm:px-6 flex justify-center pointer-events-none">
+        <header className="pointer-events-auto w-full max-w-7xl bg-white/80 backdrop-blur-2xl border border-white/70 shadow-xl hover:shadow-2xl rounded-full px-4 sm:px-7 py-2.5 flex items-center justify-between transition-all duration-300">
           
           {/* Brand Wordmark (Scrolls to top) */}
           <div 
@@ -597,108 +601,120 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBackToDashboard }) => {
         </div>
       </div>
 
-      {/* 3. HERO SECTION (EXPANDED WIDTH & HIGH VISIBILITY HERO_BG.PNG) */}
-      <section id="section-hero" className="px-3 sm:px-6 lg:px-8 pt-2 pb-10 max-w-[1720px] mx-auto w-full">
-        <RevealOnScroll direction="scale" delay={0}>
-          <div 
-            className="w-full rounded-3xl overflow-hidden shadow-2xl border border-white/80 relative min-h-[540px] sm:min-h-[620px] lg:min-h-[680px] flex items-center p-5 sm:p-10 lg:p-14 bg-cover bg-center"
-            style={{
-              backgroundImage: `linear-gradient(to right, rgba(246, 247, 243, 0.45) 0%, rgba(246, 247, 243, 0.15) 50%, rgba(0, 0, 0, 0.05) 100%), url('/assets/about/hero_bg.png')`,
-              backgroundPosition: 'center right',
-              backgroundSize: 'cover'
-            }}
+      {/* 3. HERO SECTION (FULL SCREEN LOOPING VIDEO, PROPER FIT IN WEB VIEW, TOP PADDING 0) */}
+      <section 
+        id="section-hero" 
+        className="relative w-full h-screen min-h-[600px] flex items-center justify-start overflow-hidden pt-0 px-4 sm:px-8 lg:px-16"
+      >
+        {/* Fullscreen Background Video Layer */}
+        <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
+          <video
+            ref={heroVideoRef}
+            autoPlay
+            loop
+            muted
+            playsInline
+            poster="/assets/about/hero_bg.png"
+            className="absolute inset-0 w-full h-full object-cover object-center"
           >
-            {/* Left-Aligned Frosted Glass Card */}
-            <div className="max-w-2xl bg-white/80 backdrop-blur-xl border border-white/70 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-6 z-10 text-left">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#1E2B1D]/5 border border-[#1E2B1D]/15 text-[#1E2B1D] text-xs sm:text-sm font-extrabold shadow-xs">
-                <Sparkles size={15} className="text-emerald-700" />
-                Autonomous Drone Swarm Intelligence & Precision Agriculture
-              </div>
+            <source src="/assets/about/hero_bg.mp4" type="video/mp4" />
+          </video>
+          {/* Multi-layered cinematic gradient overlays for high text contrast */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-transparent z-[10]" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/35 z-[10]" />
+        </div>
 
-              <div className="space-y-3">
-                <h1 className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tight text-[#142314] leading-none">
+        {/* Hero Content Card - perfectly fitted in web view */}
+        <div className="relative z-10 w-full max-w-7xl mx-auto flex items-center">
+          <RevealOnScroll direction="scale" delay={0}>
+            <div className="max-w-2xl bg-white/90 backdrop-blur-2xl border border-white/80 rounded-3xl p-6 sm:p-9 shadow-xl space-y-8 text-left">
+
+              {/* Main Headline */}
+              <div className="space-y-2">
+                <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-[#142314] leading-none">
                   AgriVyaan
                 </h1>
 
-                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#1E2B1D] leading-snug">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#1E2B1D] leading-snug">
                   Smart Farming, Powered by Edge AI & Drone Intelligence.
                 </h2>
               </div>
 
-              <p className="text-base sm:text-xl text-[#2C3E2A] font-semibold leading-relaxed">
+              <p className="text-sm sm:text-base lg:text-lg text-[#2C3E2A] font-semibold leading-relaxed">
                 A low-cost autonomous drone crop inspection system that catches disease and moisture stress early — before they spread.
               </p>
 
-              <div className="pt-2 flex flex-wrap items-center gap-4">
+              {/* Highlights Pill Row */}
+              <div className="flex flex-wrap items-center gap-2 pt-1 text-xs font-bold text-[#1E2B1D]">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/5 border border-black/5">
+                  <Zap size={13} className="text-emerald-700" />
+                  <span>Pixhawk Autopilot Grid</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/5 border border-black/5">
+                  <Cpu size={13} className="text-emerald-700" />
+                  <span>Dual-Stage Edge AI</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/5 border border-black/5">
+                  <Radio size={13} className="text-emerald-700" />
+                  <span>Dialect Voice Advisory</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-2 flex flex-wrap items-center gap-3">
                 <button
                   onClick={() => scrollToSection('section-timeline')}
-                  className="px-7 py-3.5 rounded-full bg-[#142314] hover:bg-[#253924] text-white text-sm sm:text-base font-bold transition-all shadow-lg hover:shadow-xl hover:scale-102 flex items-center gap-3 cursor-pointer"
+                  className="px-6 py-3 rounded-full bg-[#142314] hover:bg-[#253924] text-white text-xs sm:text-sm font-bold transition-all shadow-lg hover:shadow-xl hover:scale-102 flex items-center gap-2.5 cursor-pointer"
                 >
-                  <span>Explore Interactive Timeline</span>
-                  <ArrowDown size={16} />
+                  <span>Explore Interactive Mission</span>
+                  <ArrowDown size={15} />
                 </button>
 
-                <div className="text-xs sm:text-sm font-bold text-[#3D523B]">
-                  ↓ Scroll to scrub the live cinematic video timeline
-                </div>
+                <button
+                  onClick={handleBookScanClick}
+                  className="px-5 py-3 rounded-full bg-white/80 hover:bg-white text-[#1E2B1D] border border-black/10 text-xs sm:text-sm font-bold transition-all shadow-sm hover:shadow-md flex items-center gap-2 cursor-pointer"
+                >
+                  <span>Book a Scan</span>
+                  <ArrowUpRight size={15} />
+                </button>
               </div>
             </div>
-          </div>
-        </RevealOnScroll>
+          </RevealOnScroll>
+        </div>
+
+        {/* Bottom Scroll Cue */}
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-10 select-none pointer-events-auto">
+          <button
+            onClick={() => scrollToSection('section-timeline')}
+            className="group flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/85 hover:bg-white backdrop-blur-xl border border-white/70 shadow-lg text-[#1E2B1D] text-xs font-bold transition-all hover:scale-105 cursor-pointer"
+          >
+            <span>Scroll to explore mission</span>
+            <ArrowDown size={13} className="group-hover:translate-y-0.5 transition-transform animate-bounce text-emerald-800" />
+          </button>
+        </div>
       </section>
 
-      {/* 4. PINNED CINEMATIC SCROLL ANIMATION (SLOW, SMOOTH & SPACED 360VH) */}
+      {/* 4. DRONE MISSION TIMELINE (FULL SCREEN ANIMATION & CLEAN PROGRESS BAR ONLY) */}
       <section 
-        id="section-timeline"
+        id="section-timeline" 
         ref={scrollSectionRef}
-        className="relative w-full bg-white border-y border-black/5"
-        style={{ height: '360vh' }}
+        className="relative w-full h-[300vh] bg-white border-y border-black/5"
       >
-        <div className="sticky top-0 h-screen w-full flex flex-col justify-between overflow-hidden bg-white select-none">
-          <div className="w-full pt-4" />
+        <div className="sticky top-0 left-0 w-full h-screen flex items-center justify-center overflow-hidden select-none">
+          {/* Full Viewport Canvas */}
+          <canvas
+            ref={canvasRef}
+            className="w-full h-full block"
+          />
 
-          {/* Canvas on Clean White Background */}
-          <div className="relative flex-1 w-full h-full flex items-center justify-center bg-white">
-            <canvas
-              ref={canvasRef}
-              className="w-full h-full object-contain block"
-            />
-          </div>
-
-          {/* Bottom Floating Glassmorphic Story Capsule */}
-          <div className="z-20 w-full px-4 sm:px-8 pb-8 flex justify-center">
-            <div className="w-full max-w-4xl bg-white/90 backdrop-blur-2xl border border-black/10 rounded-3xl p-5 sm:p-7 text-[#192118] shadow-2xl space-y-3.5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="flex items-center gap-3">
-                  <span ref={phaseBadgeRef} className="text-xs sm:text-sm font-bold px-3 py-1 bg-[#1E2B1D] text-white rounded-full">
-                    Phase 01
-                  </span>
-                  <h3 ref={phaseTitleRef} className="font-extrabold text-lg sm:text-2xl text-[#192118]">
-                    Farmer Books Scan
-                  </h3>
-                </div>
-                <p ref={phaseSubtitleRef} className="text-xs sm:text-sm font-medium text-[#525B50]">
-                  Effortless on-demand booking from the mobile app without equipment investment.
-                </p>
-              </div>
-
-              {/* Smooth Progress Line */}
-              <div className="w-full h-2 bg-black/10 rounded-full overflow-hidden">
-                <div 
-                  ref={progressBarRef}
-                  className="h-full bg-gradient-to-r from-[#1E2B1D] to-[#435C3C] rounded-full transition-none"
-                  style={{ width: '0%' }}
-                />
-              </div>
-
-              {/* Phase Matrix */}
-              <div className="grid grid-cols-5 gap-1.5 text-xs sm:text-sm text-[#525B50] text-center font-semibold">
-                <div>01. Booking</div>
-                <div>02. Flight Plan</div>
-                <div>03. AI Scan</div>
-                <div>04. Verification</div>
-                <div>05. Advisory</div>
-              </div>
+          {/* Minimal Progress Bar Only */}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 w-full max-w-md sm:max-w-xl px-6 pointer-events-none">
+            <div className="w-full h-1.5 sm:h-2 bg-black/10 backdrop-blur-md rounded-full overflow-hidden shadow-xs">
+              <div 
+                ref={progressBarRef}
+                className="h-full bg-gradient-to-r from-[#1E2B1D] via-emerald-600 to-[#1E2B1D] rounded-full transition-none"
+                style={{ width: '0%' }}
+              />
             </div>
           </div>
         </div>
