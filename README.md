@@ -1,5 +1,5 @@
-﻿<p align="center">
-  <img src="web_application/public/assets/about/banner.png" alt="AgriVyaan Banner" width="100%" />
+<p align="center">
+  <video src="web_application/public/assets/about/banner.mp4" width="100%" autoplay loop muted playsinline></video>
 </p>
 
 <h1 align="center">Agri-Vyaan</h1>
