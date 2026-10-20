@@ -107,6 +107,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBackToDashboard }) => {
   const scrollSectionRef = useRef<HTMLDivElement>(null);
   const hardwareScrollRef = useRef<HTMLDivElement>(null);
   const heroVideoRef = useRef<HTMLVideoElement>(null);
+  const heroCardRef = useRef<HTMLDivElement>(null);
 
   // Direct DOM refs for HUD elements (prevents React re-renders during scroll)
   // Direct DOM ref for HUD progress bar (prevents React re-renders during scroll)
@@ -327,6 +328,19 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBackToDashboard }) => {
     };
   }, [loadFrame, handleResize, drawFrame]);
 
+  // Helper to calculate accurate offsetTop relative to the scroll container
+  const getContainerOffsetTop = useCallback((el: HTMLElement | null): number => {
+    if (!el) return 0;
+    let top = 0;
+    let current: HTMLElement | null = el;
+    const container = containerRef.current;
+    while (current && current !== container) {
+      top += current.offsetTop;
+      current = current.offsetParent as HTMLElement | null;
+    }
+    return top;
+  }, []);
+
   // Main Page Scroll Handler with Sticky Timeline & Two-Way Boundary Guards
   const handleScroll = () => {
     const container = containerRef.current;
@@ -337,10 +351,22 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBackToDashboard }) => {
     const overallProgress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
     setPageScrollPercent(overallProgress);
 
+    // Parallax depth effect on hero card as bottom sheet rises over it
+    if (heroCardRef.current) {
+      const heroHeight = container.clientHeight || 800;
+      if (scrollTop <= heroHeight) {
+        const p = Math.min(1, Math.max(0, scrollTop / heroHeight));
+        heroCardRef.current.style.opacity = `${(1 - p * 0.45).toFixed(3)}`;
+        heroCardRef.current.style.transform = `translateY(${(p * 50).toFixed(1)}px)`;
+      } else {
+        heroCardRef.current.style.opacity = '0.55';
+      }
+    }
+
     // Timeline Scrubbing & Boundary Safeguards
     const sec = scrollSectionRef.current;
     if (sec) {
-      const secTop = sec.offsetTop;
+      const secTop = getContainerOffsetTop(sec);
       const clientHeight = container.clientHeight;
       const scrollDistance = sec.offsetHeight - clientHeight;
 
@@ -376,7 +402,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBackToDashboard }) => {
     for (let i = sections.length - 1; i >= 0; i--) {
       const el = document.getElementById(sections[i]);
       if (el) {
-        const top = el.offsetTop - 180;
+        const top = getContainerOffsetTop(el) - 180;
         if (scrollTop >= top) {
           setActiveSection(sections[i] === 'section-timeline' ? 'section-phases' : sections[i]);
           break;
@@ -389,7 +415,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBackToDashboard }) => {
     const el = document.getElementById(sectionId);
     if (el && containerRef.current) {
       isNavigatingRef.current = true;
-      const top = el.offsetTop - 80;
+      const top = sectionId === 'section-hero' ? 0 : getContainerOffsetTop(el);
       containerRef.current.scrollTo({ top, behavior: 'smooth' });
       setActiveSection(sectionId);
       setMobileMenuOpen(false);
@@ -604,10 +630,10 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBackToDashboard }) => {
       {/* 3. HERO SECTION (FULL SCREEN LOOPING VIDEO, PROPER FIT IN WEB VIEW, TOP PADDING 0) */}
       <section 
         id="section-hero" 
-        className="relative w-full h-screen min-h-[600px] flex items-center justify-start overflow-hidden pt-0 px-4 sm:px-8 lg:px-16"
+        className="sticky top-0 w-full h-screen min-h-[600px] flex items-center justify-start overflow-hidden pt-0 px-4 sm:px-8 lg:px-16 z-0 bg-[#0A110A]"
       >
         {/* Fullscreen Background Video Layer */}
-        <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
+        <div className="absolute -inset-1 w-[calc(100%+8px)] h-[calc(100%+8px)] overflow-hidden pointer-events-none z-0 bg-[#0A110A]">
           <video
             ref={heroVideoRef}
             autoPlay
@@ -615,7 +641,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBackToDashboard }) => {
             muted
             playsInline
             poster="/assets/about/hero_bg.png"
-            className="absolute inset-0 w-full h-full object-cover object-center"
+            className="absolute inset-0 w-full h-full object-cover object-center scale-[1.02]"
           >
             <source src="/assets/about/hero_bg.mp4" type="video/mp4" />
           </video>
@@ -625,7 +651,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBackToDashboard }) => {
         </div>
 
         {/* Hero Content Card - perfectly fitted in web view */}
-        <div className="relative z-10 w-full max-w-7xl mx-auto flex items-center">
+        <div ref={heroCardRef} className="relative z-10 w-full max-w-7xl mx-auto flex items-center will-change-transform transition-[opacity,transform] duration-75 ease-out">
           <RevealOnScroll direction="scale" delay={0}>
             <div className="max-w-2xl bg-white/90 backdrop-blur-2xl border border-white/80 rounded-3xl p-6 sm:p-9 shadow-xl space-y-8 text-left">
 
@@ -694,13 +720,19 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBackToDashboard }) => {
         </div>
       </section>
 
-      {/* 4. DRONE MISSION TIMELINE (FULL SCREEN ANIMATION & CLEAN PROGRESS BAR ONLY) */}
+      {/* BOTTOM PART: OVERLAYS ABOVE STICKY HERO (PARALLAX SHEET EFFECT) */}
+      <div className="relative z-10 w-full bg-[#F6F7F3] rounded-t-[36px] sm:rounded-t-[48px] shadow-[0_-30px_70px_-15px_rgba(0,0,0,0.5)]">
+        {/* 4. DRONE MISSION TIMELINE (FULL SCREEN ANIMATION & CLEAN PROGRESS BAR ONLY) */}
       <section 
         id="section-timeline" 
         ref={scrollSectionRef}
-        className="relative w-full h-[300vh] bg-white border-y border-black/5"
+        className="relative w-full h-[300vh] bg-white rounded-t-[36px] sm:rounded-t-[48px] border-b border-black/5"
       >
-        <div className="sticky top-0 left-0 w-full h-screen flex items-center justify-center overflow-hidden select-none">
+        <div className="sticky top-0 left-0 w-full h-screen flex items-center justify-center overflow-hidden select-none rounded-t-[36px] sm:rounded-t-[48px]">
+          {/* Sleek top sheet pill grab handle */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+            <div className="w-12 h-1.5 rounded-full bg-black/20 backdrop-blur-md shadow-xs" />
+          </div>
           {/* Full Viewport Canvas */}
           <canvas
             ref={canvasRef}
@@ -2025,6 +2057,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBackToDashboard }) => {
       <footer className="border-t border-black/5 bg-white/80 py-8 px-4 text-center text-xs sm:text-sm text-[#525B50]">
         AgriVyaan · Autonomous Drone Intelligence Platform · Precision Edge Agriculture
       </footer>
+      </div>
     </div>
   );
 };
