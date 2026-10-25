@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { FieldAsset, ZoneData } from '../../types';
-import { MapLibreSpatialMap } from '../gis/MapLibreSpatialMap';
+import { OperationalMap } from '../gis/OperationalMap';
 import { ChevronLeft, CheckCircle2 } from 'lucide-react';
 
 interface FieldDetailsViewProps {
@@ -129,13 +129,9 @@ export const FieldDetailsView: React.FC<FieldDetailsViewProps> = ({
                 </span>
               </div>
 
-              <MapLibreSpatialMap
-                zones={field.zones}
-                selectedZoneId={selectedZone?.id}
-                onSelectZone={(z) => setSelectedZone(z)}
-                showFlightPath={true}
-                height="450px"
-              />
+              <div style={{ position:'relative',height:450,borderRadius:10,overflow:'hidden' }}>
+                <OperationalMap mode="explore" field={field} zones={field.zones} selectedZoneId={selectedZone?.id} onSelectZone={setSelectedZone} />
+              </div>
             </div>
           </div>
 
@@ -328,7 +324,7 @@ export const FieldDetailsView: React.FC<FieldDetailsViewProps> = ({
                   Ground Inspection Dispatch Created
                 </div>
                 <div style={{ fontSize: '12px', color: '#6B7068', marginTop: '4px' }}>
-                  Task assigned to field agent for GPS location 19.2184, 72.9781.
+                  Task assigned to field agent for GPS location {selectedZone.gpsCoords}.
                 </div>
                 <button
                   className="op-btn op-btn-primary"

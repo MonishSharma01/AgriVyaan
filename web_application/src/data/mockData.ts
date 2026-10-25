@@ -2,12 +2,12 @@ import type { FarmerRequest, FieldAsset, DroneOperation, CropFinding, Assessment
 
 // ─── Helper: generate 6x6 zone grid for a field ───────────────────────────────
 // GPS coords are spread across the Ambegaon potato field (19.0536–19.0550°N, 73.8810–73.8830°E)
-const generateZones = (overrides: Record<number, Partial<ZoneData>> = {}): ZoneData[] => {
+const generateZones = (overrides: Record<number, Partial<ZoneData>> = {}, origin: [number, number] = [19.0537, 73.8812]): ZoneData[] => {
   const zones: ZoneData[] = [];
   let count = 1;
   // Field boundary spans roughly 0.0014° lat × 0.0020° lng → 6 cells each
-  const LAT_START = 19.0537;
-  const LNG_START = 73.8812;
+  const LAT_START = origin[0];
+  const LNG_START = origin[1];
   const LAT_STEP  = 0.0002;   // ~22m per row
   const LNG_STEP  = 0.0003;   // ~27m per col
   for (let r = 1; r <= 6; r++) {
@@ -41,7 +41,7 @@ export const MOCK_REQUESTS: FarmerRequest[] = [
     farmerName: 'Ramesh Kumar',
     fieldId: 'FIELD-A',
     fieldName: 'Field A (Potato)',
-    location: 'Thane, Maharashtra',
+    location: 'Ambegaon, Pune, Maharashtra',
     requestedDate: '2026-08-26',
     requestedTime: '08:30 AM',
     scanType: 'Crop Health Scan',
@@ -150,16 +150,16 @@ const fieldCSensors: SensorReading[] = [
 export const MOCK_FIELDS: FieldAsset[] = [
   {
     id: 'FIELD-A',
-    name: 'Shree LR Tiwari College Field',
-    farmerName: 'Campus Operations',
-    location: 'Mira Road, Thane, Maharashtra',
-    crop: 'Experimental Parcel',
-    areaHa: 0.793,
+    name: 'Field A (Potato)',
+    farmerName: 'Ramesh Kumar',
+    location: 'Ambegaon, Pune, Maharashtra',
+    crop: 'Potato',
+    areaHa: 4.8,
     boundaryPolygon: [
-      [19.28455, 72.87125],
-      [19.28475, 72.87190],
-      [19.28420, 72.87215],
-      [19.28400, 72.87150]
+      [19.05355, 73.88095],
+      [19.05370, 73.88370],
+      [19.05505, 73.88395],
+      [19.05490, 73.88120]
     ],
     sowingDate: '2026-06-15',
     cropStage: 'Tuber bulking stage',
@@ -171,9 +171,9 @@ export const MOCK_FIELDS: FieldAsset[] = [
     activeAlerts: ['Zone 2: Low Soil Moisture Alert — Potato Tuber Stress Risk', 'Zone 27: Late Blight Canopy Warning'],
     sensors: fieldASensors,
     zones: generateZones({
-      2:  { status: 'Low moisture',           soilMoisture: 27, temperature: 32, stressType: 'Low moisture (27%) — Potato tuber stress risk', confidence: 91, recommendedAction: 'Check irrigation in Zone 2 immediately. Potatoes need ≥35% moisture during bulking.', aiExplanation: 'Soil moisture declined from 38% to 27% over 48 hrs — critical during tuber formation.', gpsCoords: '19.2184, 72.9781' },
+      2:  { status: 'Low moisture',           soilMoisture: 27, temperature: 32, stressType: 'Low moisture (27%) — Potato tuber stress risk', confidence: 91, recommendedAction: 'Check irrigation in Zone 2 immediately. Potatoes need ≥35% moisture during bulking.', aiExplanation: 'Soil moisture declined from 38% to 27% over 48 hrs — critical during tuber formation.', gpsCoords: '19.0537, 73.8815' },
       3:  { status: 'Possible nutrient stress', soilMoisture: 45, temperature: 30, stressType: 'Possible potassium / nitrogen deficiency', confidence: 78, recommendedAction: 'Apply balanced NPK fertilizer. Potatoes are heavy potassium feeders.', aiExplanation: 'Mild interveinal chlorosis on lower leaves consistent with K deficiency.' },
-      27: { status: 'High Priority',            soilMoisture: 23, temperature: 33, stressType: 'Late Blight (Phytophthora infestans) — High Risk', confidence: 91, recommendedAction: 'Immediate fungicide application (Metalaxyl / Mancozeb) in Zone 27. Isolate perimeter.', aiExplanation: 'Dark water-soaked lesions on foliage detected by multispectral anomaly. Classic Late Blight signature.', gpsCoords: '19.2184, 72.9781' }
+      27: { status: 'High Priority',            soilMoisture: 23, temperature: 33, stressType: 'Late Blight (Phytophthora infestans) — High Risk', confidence: 91, recommendedAction: 'Immediate fungicide application (Metalaxyl / Mancozeb) in Zone 27. Isolate perimeter.', aiExplanation: 'Dark water-soaked lesions on foliage detected by multispectral anomaly. Classic Late Blight signature.', gpsCoords: '19.0545, 73.8818' }
     })
   },
   {
@@ -200,7 +200,7 @@ export const MOCK_FIELDS: FieldAsset[] = [
     sensors: fieldBSensors,
     zones: generateZones({
       2: { status: 'Disease risk', soilMoisture: 45, stressType: 'Early Blight — Alternaria solani lesions', confidence: 82, recommendedAction: 'Spray Chlorothalonil or Mancozeb fungicide across Zone 2.', aiExplanation: 'Concentric ringed brown lesions detected on older potato foliage — classic Early Blight pattern.' }
-    })
+    }, [19.0570, 73.8845])
   },
   {
     id: 'FIELD-C',
@@ -224,7 +224,7 @@ export const MOCK_FIELDS: FieldAsset[] = [
     moistureStatus: 'NORMAL',
     activeAlerts: [],
     sensors: fieldCSensors,
-    zones: generateZones()
+    zones: generateZones({}, [19.0510, 73.8775])
   },
   {
     id: 'FIELD-D',
@@ -245,7 +245,7 @@ export const MOCK_FIELDS: FieldAsset[] = [
     activeAlerts: ['Black Scurf (Rhizoctonia solani) Suspected — Perimeter Zones'],
     zones: generateZones({
       8: { status: 'Warning', soilMoisture: 18, stressType: 'Black Scurf / stem canker stress pattern', confidence: 86, recommendedAction: 'Verify irrigation, consider Thiabendazole soil drench in Zone 8.', gpsCoords: '19.1120, 73.0125' }
-    })
+    }, [19.1120, 73.0120])
   }
 ];
 
@@ -356,7 +356,7 @@ export const MOCK_FINDINGS: CropFinding[] = [
     status: 'Pending Validation',
     findingType: 'Potato tuber stress — Low moisture / Irrigation deficit',
     confidencePercent: 91,
-    gpsCoords: '19.2184, 72.9781',
+    gpsCoords: '19.0537, 73.8815',
     timestamp: '10:42 AM',
     operationId: 'OP-0142',
     farmerName: 'Ramesh Kumar',

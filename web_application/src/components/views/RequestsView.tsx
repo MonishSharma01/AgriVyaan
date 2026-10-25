@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { FarmerRequest, FieldAsset } from '../../types';
 import { CalendarCheck, MapPin, Scan, Clock, Leaf, BarChart2, FileText, AlertCircle } from 'lucide-react';
-import { MapLibreSpatialMap } from '../gis/MapLibreSpatialMap';
+import { OperationalMap } from '../gis/OperationalMap';
 import { MOCK_FIELDS } from '../../data/mockData';
 
 interface RequestsViewProps {
@@ -357,16 +357,8 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                 <div style={{ fontSize: '10px', fontWeight: 700, color: '#8B8F88', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>
                   Target Field Boundary
                 </div>
-                <div style={{ borderRadius: '6px', overflow: 'hidden', border: '1px solid #D8D9D2' }}>
-                  <MapLibreSpatialMap
-                    fields={allAvailableFields}
-                    selectedFieldId={targetField?.id}
-                    zones={targetField?.zones || []}
-                    selectedZoneId="Zone 27"
-                    showFlightPath={false}
-                    height="200px"
-                    allowDrawing={false}
-                  />
+                <div style={{ position:'relative',height:210,borderRadius:9,overflow:'hidden',border:'1px solid #D8D9D2' }}>
+                  <OperationalMap mode="explore" field={targetField} zones={targetField?.zones || []} />
                 </div>
               </div>
             </div>

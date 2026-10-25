@@ -2,7 +2,7 @@ import type { AssessmentReport, FieldAsset, CropFinding } from '../types';
 
 /**
  * PDF Generation Service using jsPDF
- * Generates exact PDF reports matching the AgriSwarm Crop Intelligence Audit layout format.
+ * Generates exact PDF reports matching the AgriVyaan Crop Intelligence Audit layout format.
  */
 export const reportlabPdfService = {
   buildReportLabPayload(report: AssessmentReport, field: FieldAsset, findings: CropFinding[]) {
@@ -11,7 +11,7 @@ export const reportlabPdfService = {
         title: `AGRI_SWARM_INTELLIGENCE_REPORT_${report.id}`,
         author: 'Authorized Agritech Lead: Dr. S. K. Sharma',
         subject: `Crop Intelligence Audit for ${report.fieldName}`,
-        creator: 'AgriSwarm Platform'
+        creator: 'AgriVyaan Platform'
       },
       report,
       field,
@@ -55,7 +55,7 @@ export const reportlabPdfService = {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
     doc.setTextColor(...colors.primaryGreen);
-    doc.text('AgriSwarm Crop Intelligence Audit', marginL, y);
+    doc.text('AgriVyaan Crop Intelligence Audit', marginL, y);
 
     y += 3;
     doc.setDrawColor(...colors.lineBorder);
