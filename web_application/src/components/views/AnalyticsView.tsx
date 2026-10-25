@@ -11,12 +11,12 @@ export const AnalyticsView: React.FC = () => {
             Operational Analytics & Agronomic Intelligence
           </h1>
           <p style={{ fontSize: '13px', color: '#5F645D', marginTop: '2px' }}>
-            Telemetry, inspection efficiency metrics, probability model calibration, and crop health trends.
+            Illustrative demo metrics for telemetry, inspection efficiency, model confidence, and crop health trends.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px', fontSize: '11px', color: '#5F645D' }}>
           <span style={{ backgroundColor: '#E7EFE5', color: '#2A3B27', padding: '4px 10px', borderRadius: '4px', border: '1px solid rgba(67, 92, 60, 0.3)', fontWeight: 600 }}>
-            Region: Thane & Kalyan Sectors
+            Maharashtra · Demo dataset
           </span>
         </div>
       </div>

@@ -37,6 +37,26 @@ export const Header: React.FC<HeaderProps> = ({
         return ['Operations', 'Drone Operations', selectedOpId || 'OP-0142'];
       case 'validation':
         return ['Operations', 'AI Validation Queue'];
+      case 'farmers':
+        return ['Field operations', 'Farmers'];
+      case 'soil-card':
+        return ['Field operations', 'Soil Health Cards'];
+      case 'drones':
+        return ['Flight operations', 'Drone fleet'];
+      case 'active-flight':
+        return ['Flight operations', 'Active flight'];
+      case 'flight-history':
+        return ['Flight operations', 'Flight history'];
+      case 'recommendations':
+        return ['Field intelligence', 'Recommendations'];
+      case 'stores':
+        return ['Field intelligence', 'Agri-stores'];
+      case 'sync':
+        return ['System', 'Sync & data health'];
+      case 'weather':
+        return ['Field intelligence', 'Weather & alerts'];
+      case 'library':
+        return ['Field intelligence', 'Crop reference'];
       case 'reports':
         return ['Insights', 'Field Reports'];
       case 'analytics':
@@ -77,7 +97,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#5F645D' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span className="pulse-dot" title="Operational Connection Active (14ms)" />
-          <span style={{ fontWeight: 700, color: '#1C201A' }}>AgriSwarm</span>
+          <span style={{ fontWeight: 700, color: '#1C201A' }}>AgriVyaan</span>
         </div>
         {breadcrumbs.map((crumb, idx) => (
           <React.Fragment key={idx}>
@@ -249,7 +269,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Date Display */}
         <div style={{ fontSize: '12px', color: '#6B7068', fontWeight: 500, paddingLeft: '6px', borderLeft: '1px solid #DDDED7' }}>
-          Thu, Aug 27, 2026
+          {new Intl.DateTimeFormat('en-IN', { weekday: 'short', day: '2-digit', month: 'short' }).format(new Date())}
         </div>
       </div>
     </header>

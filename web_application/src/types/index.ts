@@ -11,7 +11,15 @@ export type NavTab =
   | 'weather'
   | 'library'
   | 'activity'
-  | 'settings';
+  | 'settings'
+  | 'farmers'
+  | 'soil-card'
+  | 'drones'
+  | 'active-flight'
+  | 'flight-history'
+  | 'recommendations'
+  | 'stores'
+  | 'sync';
 
 export type PriorityLevel = 'High' | 'Medium' | 'Low';
 export type RequestStatus = 'Pending' | 'Accepted' | 'Scheduled' | 'In Progress' | 'Completed' | 'Rejected';
