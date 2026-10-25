@@ -9,10 +9,10 @@ import { registerSW } from 'virtual:pwa-register'
 registerSW({
   immediate: true,
   onNeedRefresh() {
-    console.log('AgriSwarm application update available.')
+    console.log('AgriVyaan application update available.')
   },
   onOfflineReady() {
-    console.log('AgriSwarm is ready for offline desktop operation.')
+    console.log('AgriVyaan is ready for offline desktop operation.')
   }
 })
 

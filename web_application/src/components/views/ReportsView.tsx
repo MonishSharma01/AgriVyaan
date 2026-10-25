@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import type { AssessmentReport, FieldAsset } from '../../types';
 import { MOCK_FIELDS, MOCK_FINDINGS } from '../../data/mockData';
-import { reportlabPdfService } from '../../lib/reportlabPdfService';
 import { Download } from 'lucide-react';
 
 interface ReportsViewProps {
@@ -138,7 +137,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ reports }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontSize: '20px', fontWeight: 700, color: '#1C201A', margin: 0 }}>
-            AgriSwarm Crop Intelligence Audits
+            AgriVyaan Crop Intelligence Audits
           </h1>
           <p style={{ fontSize: '12px', color: '#5F645D', marginTop: '2px' }}>
             Validated field audit reports — sensor telemetry, zone risk analysis, drone imagery & expert recommendations.
@@ -149,6 +148,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ reports }) => {
           onClick={async () => {
             if (selectedReport) {
               const findings = MOCK_FINDINGS.filter(f => f.operationId === selectedReport.operationId || f.fieldId === targetField.id);
+              const { reportlabPdfService } = await import('../../lib/reportlabPdfService');
               await reportlabPdfService.exportReportLabPdf(selectedReport, targetField, findings);
             }
           }}

@@ -39,8 +39,8 @@ interface SearchResult {
   type: string;
 }
 
-// ── Default fallback center: Shree LR Tiwari College of Engineering, Mira Road
-const DEFAULT_CENTER: [number, number] = [19.2842, 72.8715];
+// Default center: Ambegaon potato growing area, Pune district.
+const DEFAULT_CENTER: [number, number] = [19.0544, 73.8820];
 
 export const MapLibreSpatialMap: React.FC<MapLibreSpatialMapProps> = ({
   zones: _zones = [],
@@ -655,7 +655,7 @@ export const MapLibreSpatialMap: React.FC<MapLibreSpatialMapProps> = ({
               <Search size={15} color="#A8D5A2" style={{ marginRight: 6 }} />
               <input
                 type="text"
-                placeholder="Search location (e.g. Shree LR Tiwari College, Mira Road)..."
+                placeholder="Search village, district, or coordinates..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => searchResults.length > 0 && setShowSearchDropdown(true)}
