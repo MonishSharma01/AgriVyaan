@@ -21,6 +21,7 @@ export const FieldMap: React.FC<FieldMapProps> = ({
   const [mapLayer, setMapLayer] = useState<'satellite' | 'vector' | 'multispectral'>('multispectral');
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [hoveredZone, setHoveredZone] = useState<ZoneData | null>(null);
+  const gpsZone = zones.find(zone => zone.id === selectedZoneId) || zones[0];
 
   // SVG grid logic for 6x6 zones inside field boundary
   const gridRows = 6;
@@ -152,7 +153,7 @@ export const FieldMap: React.FC<FieldMapProps> = ({
               fontFamily: 'monospace'
             }}
           >
-            GPS: 19.2184° N, 72.9781° E
+            GPS: {gpsZone?.gpsCoords || 'Field position unavailable'}
           </span>
           <button
             onClick={() => setZoomLevel(prev => Math.min(prev + 0.2, 1.6))}

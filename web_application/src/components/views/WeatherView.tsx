@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import type { WeatherForecast } from '../../types';
+import { Cloud, CloudRain, Sun } from 'lucide-react';
 
 interface WeatherViewProps {
   weather: WeatherForecast[];
+  location?: string;
 }
 
-export const WeatherView: React.FC<WeatherViewProps> = ({ weather }) => {
+export const WeatherView: React.FC<WeatherViewProps> = ({ weather, location = 'Selected field' }) => {
   const [selectedDay, setSelectedDay] = useState<number>(0);
   const today = weather[0];
   const selected = weather[selectedDay];
@@ -17,10 +19,9 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ weather }) => {
   };
 
   const getWeatherIcon = (condition: string) => {
-    if (condition === 'Sunny') return '☀';
-    if (condition === 'Rainy') return '🌧';
-    if (condition === 'Cloudy' || condition === 'Overcast') return '☁';
-    return '⛅';
+    if (condition === 'Sunny') return <Sun size={22} color="#b68735" />;
+    if (condition === 'Rainy') return <CloudRain size={22} color="#5c7d95" />;
+    return <Cloud size={22} color="#788477" />;
   };
 
   const sprayColors = getSprayColor(today.sprayingCondition);
@@ -34,12 +35,12 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ weather }) => {
             Weather & Spraying Conditions
           </h1>
           <p style={{ fontSize: '13px', color: '#6B7068', marginTop: '2px' }}>
-            6-day operational weather forecast with spray window advisory.
+            Sample weather data for the selected field · connect a forecast provider for live conditions.
           </p>
         </div>
         <div style={{ fontSize: '11px', color: '#6B7068', textAlign: 'right' }}>
-          <div style={{ fontWeight: 600, color: '#20231F' }}>Thane, Maharashtra</div>
-          <div>27 Aug 2026 · 05:30 IST</div>
+          <div style={{ fontWeight: 600, color: '#20231F' }}>{location}</div>
+          <div>{new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date())} · demo data</div>
         </div>
       </div>
 
@@ -119,6 +120,8 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ weather }) => {
           {weather.map((day, idx) => {
             const isSelected = idx === selectedDay;
             const colors = getSprayColor(day.sprayingCondition);
+            const forecastDate = new Date();
+            forecastDate.setDate(forecastDate.getDate() + idx);
             return (
               <button
                 key={idx}
@@ -132,9 +135,9 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ weather }) => {
                   cursor: 'pointer'
                 }}
               >
-                <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7068' }}>{day.dayName}</div>
-                <div style={{ fontSize: '11px', color: '#6B7068', marginBottom: '6px' }}>{day.date}</div>
-                <div style={{ fontSize: '22px', lineHeight: 1, marginBottom: '6px' }}>{getWeatherIcon(day.weatherCondition)}</div>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7068' }}>{new Intl.DateTimeFormat('en-IN', { weekday: 'short' }).format(forecastDate)}</div>
+                <div style={{ fontSize: '11px', color: '#6B7068', marginBottom: '6px' }}>{new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short' }).format(forecastDate)}</div>
+                <div style={{ display:'grid',placeItems:'center',marginBottom:'6px' }}>{getWeatherIcon(day.weatherCondition)}</div>
                 <div style={{ fontSize: '14px', fontWeight: 700, color: '#20231F' }}>{day.temperature}°C</div>
                 <div style={{
                   marginTop: '6px',

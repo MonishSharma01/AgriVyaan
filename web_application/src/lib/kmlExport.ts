@@ -35,7 +35,7 @@ export function generateKMLContent(options: KMLExportOptions): string {
 <kml xmlns="http://www.opengis.net/kml/2.2">
   <Document>
     <name>${escapeXml(fieldName)} Mission Boundary</name>
-    <description>Exported from AgriSwarm GIS Platform for Pixhawk / Mission Planner</description>
+    <description>Exported from AgriVyaan GIS Platform for Pixhawk / Mission Planner</description>
     
     <Style id="fieldBoundaryStyle">
       <LineStyle>

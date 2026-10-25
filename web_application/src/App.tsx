@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import type {
   NavTab,
   FarmerRequest,
@@ -30,20 +30,21 @@ import {
 } from './lib/supabase';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
-import { DashboardView } from './components/views/DashboardView';
-import { RequestsView } from './components/views/RequestsView';
-import { FieldsView } from './components/views/FieldsView';
-import { FieldDetailsView } from './components/views/FieldDetailsView';
-import { OperationsView } from './components/views/OperationsView';
-import { OperationDetailsView } from './components/views/OperationDetailsView';
-import { ValidationView } from './components/views/ValidationView';
-import { ReportsView } from './components/views/ReportsView';
-import { AnalyticsView } from './components/views/AnalyticsView';
-import { ActivityView } from './components/views/ActivityView';
-import { SettingsView } from './components/views/SettingsView';
-import { WeatherView } from './components/views/WeatherView';
-import { LibraryView } from './components/views/LibraryView';
-import { AboutPage } from './components/views/AboutPage';
+const DashboardView = lazy(() => import('./components/views/DashboardView').then(module => ({ default: module.DashboardView })));
+const RequestsView = lazy(() => import('./components/views/RequestsView').then(module => ({ default: module.RequestsView })));
+const FieldsView = lazy(() => import('./components/views/FieldsView').then(module => ({ default: module.FieldsView })));
+const FieldDetailsView = lazy(() => import('./components/views/FieldDetailsView').then(module => ({ default: module.FieldDetailsView })));
+const OperationsView = lazy(() => import('./components/views/OperationsView').then(module => ({ default: module.OperationsView })));
+const OperationDetailsView = lazy(() => import('./components/views/OperationDetailsView').then(module => ({ default: module.OperationDetailsView })));
+const ValidationView = lazy(() => import('./components/views/ValidationView').then(module => ({ default: module.ValidationView })));
+const ReportsView = lazy(() => import('./components/views/ReportsView').then(module => ({ default: module.ReportsView })));
+const AnalyticsView = lazy(() => import('./components/views/AnalyticsView').then(module => ({ default: module.AnalyticsView })));
+const ActivityView = lazy(() => import('./components/views/ActivityView').then(module => ({ default: module.ActivityView })));
+const SettingsView = lazy(() => import('./components/views/SettingsView').then(module => ({ default: module.SettingsView })));
+const WeatherView = lazy(() => import('./components/views/WeatherView').then(module => ({ default: module.WeatherView })));
+const LibraryView = lazy(() => import('./components/views/LibraryView').then(module => ({ default: module.LibraryView })));
+const OperatorWorkspaceView = lazy(() => import('./components/views/OperatorWorkspaceView').then(module => ({ default: module.OperatorWorkspaceView })));
+const AboutPage = lazy(() => import('./components/views/AboutPage').then(module => ({ default: module.AboutPage })));
 
 const LOCAL_STORAGE_FIELDS_KEY = 'agriswarm_custom_fields';
 
@@ -71,7 +72,7 @@ export function App() {
     }
     return '/';
   });
-  const [activeTab, setActiveTab] = useState<NavTab>('requests');
+  const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   useEffect(() => {
@@ -107,8 +108,8 @@ export function App() {
 
       if (dbFields && dbFields.length > 0) {
         const mappedFields: FieldAsset[] = dbFields.map((f, idx) => {
-          const lat = f.latitude || 19.2842;
-          const lng = f.longitude || 72.8715;
+          const lat = f.latitude || 19.0544;
+          const lng = f.longitude || 73.8820;
           const dLat = 0.0015;
           const dLng = 0.0015;
 
@@ -165,11 +166,14 @@ export function App() {
             ? b.booking_datetime.includes('T')
               ? b.booking_datetime.split('T')[0]
               : b.booking_datetime.split(' ')[0]
-            : '2026-09-15';
+            : new Date().toISOString().slice(0, 10);
 
           const timeStr = b.booking_datetime && b.booking_datetime.includes(' ')
             ? b.booking_datetime.split(' ')[1]
             : '10:00 AM';
+
+          const bookingDate = b.booking_datetime ? new Date(b.booking_datetime) : null;
+          const validBookingDate = bookingDate && !Number.isNaN(bookingDate.getTime()) ? bookingDate : null;
 
           return {
             id: b.booking_id,
@@ -178,7 +182,7 @@ export function App() {
             fieldName: b.field_name || field?.field_name || 'Target Field',
             location: user?.location || (field ? `${field.latitude.toFixed(4)}° N, ${field.longitude.toFixed(4)}° E` : 'Maharashtra, India'),
             requestedDate: dateStr,
-            requestedTime: timeStr,
+            requestedTime: validBookingDate ? validBookingDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : timeStr,
             scanType: 'Crop Health Scan',
             priority: status === 'Pending' ? 'High' : 'Medium',
             status,
@@ -371,16 +375,17 @@ export function App() {
 
   const selectedField = fields.find(f => f.id === selectedFieldId) || fields[0];
   const selectedOperation = operations.find(o => o.id === selectedOpId) || operations[0];
+  const operationField = fields.find(f => f.name === selectedOperation?.fieldName) || selectedField;
 
   const pendingValidationsCount = findings.filter(f => f.status === 'Pending Validation').length;
   const pendingRequestsCount = requests.filter(r => r.status === 'Pending').length;
 
   if (currentPath === '/about' || currentPath === '/about/') {
-    return <AboutPage onBackToDashboard={() => handleNavigatePath('/')} />;
+    return <Suspense fallback={<div style={{ minHeight:'100vh',display:'grid',placeItems:'center',background:'#f6f7f3',color:'#52634a',fontFamily:'Inter, sans-serif' }}>Loading AgriVyaan…</div>}><AboutPage onBackToDashboard={() => { handleNavigatePath('/'); setActiveTab('dashboard'); }} /></Suspense>;
   }
 
   return (
-    <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden', backgroundColor: '#F6F6F2' }}>
+    <div className="app-shell" style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden', backgroundColor: '#F6F6F2' }}>
       {/* Persistent Left Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -404,6 +409,7 @@ export function App() {
 
         {/* Scrollable View Content */}
         <main style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+          <Suspense fallback={<div className="view-loading" role="status">Loading workspace…</div>}>
           {activeTab === 'dashboard' && (
             <DashboardView
               operations={operations}
@@ -411,6 +417,8 @@ export function App() {
               findings={findings}
               zones={selectedField.zones}
               activities={activities}
+              reports={reports}
+              field={selectedField}
               onNavigate={(tab) => setActiveTab(tab)}
               onSelectOperation={handleSelectOperation}
               onSelectField={handleSelectField}
@@ -458,6 +466,7 @@ export function App() {
           {activeTab === 'operation-details' && (
             <OperationDetailsView
               operation={selectedOperation}
+              field={operationField}
               zones={selectedField.zones}
               onNavigateBack={() => setActiveTab('operations')}
               onNavigateToValidation={() => setActiveTab('validation')}
@@ -482,13 +491,18 @@ export function App() {
 
           {activeTab === 'analytics' && <AnalyticsView />}
 
-          {activeTab === 'weather' && <WeatherView weather={weather} />}
+          {activeTab === 'weather' && <WeatherView weather={weather} location={selectedField.location} />}
 
           {activeTab === 'library' && <LibraryView library={library} />}
 
           {activeTab === 'activity' && <ActivityView activities={activities} />}
 
           {activeTab === 'settings' && <SettingsView />}
+
+          {(['farmers','soil-card','drones','active-flight','flight-history','recommendations','stores','sync'] as const).includes(activeTab as 'farmers'|'soil-card'|'drones'|'active-flight'|'flight-history'|'recommendations'|'stores'|'sync') && (
+            <OperatorWorkspaceView page={activeTab as 'farmers'|'soil-card'|'drones'|'active-flight'|'flight-history'|'recommendations'|'stores'|'sync'} onNavigate={setActiveTab} field={selectedField} />
+          )}
+          </Suspense>
         </main>
       </div>
     </div>

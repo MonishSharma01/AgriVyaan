@@ -1,6 +1,6 @@
 import React from 'react';
-import type { NavTab, DroneOperation, FarmerRequest, CropFinding, ZoneData, ActivityItem } from '../../types';
-import { MapLibreSpatialMap } from '../gis/MapLibreSpatialMap';
+import type { NavTab, DroneOperation, FarmerRequest, CropFinding, ZoneData, ActivityItem, AssessmentReport, FieldAsset } from '../../types';
+import { OperationalMap } from '../gis/OperationalMap';
 import { AlertTriangle, ChevronRight } from 'lucide-react';
 
 interface DashboardViewProps {
@@ -9,6 +9,8 @@ interface DashboardViewProps {
   findings: CropFinding[];
   zones: ZoneData[];
   activities: ActivityItem[];
+  reports: AssessmentReport[];
+  field: FieldAsset;
   onNavigate: (tab: NavTab) => void;
   onSelectOperation: (opId: string) => void;
   onSelectField: (fieldId: string) => void;
@@ -20,6 +22,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   findings,
   zones,
   activities,
+  reports,
+  field,
   onNavigate,
   onSelectOperation,
   onSelectField
@@ -27,6 +31,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const pendingRequests = requests.filter(r => r.status === 'Pending').length;
   const inProgressOps = operations.filter(o => o.status === 'In Progress').length;
   const pendingValidations = findings.filter(f => f.status === 'Pending Validation').length;
+  const highPriorityRequests = requests.filter(r => r.status === 'Pending' && r.priority === 'High');
+  const reportsReady = reports.filter(report => report.status === 'Ready').length;
+  const completedOperations = operations.filter(operation => operation.status === 'Completed').length;
+  const activeOperation = operations.find(operation => operation.status === 'In Progress');
+  const inspectionZones = zones.filter(zone => zone.status === 'Low moisture' || zone.status === 'High Priority');
+  const todayLabel = new Intl.DateTimeFormat('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
 
   return (
     <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -38,7 +48,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               Good morning, Operator
             </h1>
             <p style={{ fontSize: '13px', color: '#6B7068', marginTop: '4px' }}>
-              Thursday, August 27, 2026 · Fleet status normal · 3 high-priority validation items queued
+              {todayLabel} · {field.crop} operations · {pendingValidations} validation items need review
             </p>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -58,7 +68,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Restrained Horizontal Operational Summary (Typography & Subtle Separators, NO Floating Giant Cards) */}
-        <div 
+        <div className="dashboard-summary"
           style={{
             marginTop: '16px',
             backgroundColor: '#FFFFFF',
@@ -70,10 +80,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             justifyContent: 'space-between'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div className="dashboard-summary-metrics" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div>
               <span style={{ fontSize: '11px', color: '#6B7068', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Requests</span>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: '#20231F' }}>18 Requests</div>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: '#20231F' }}>{requests.length} Requests</div>
             </div>
             <div style={{ height: '24px', width: '1px', backgroundColor: '#DDDED7' }} />
             
@@ -97,13 +107,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             <div>
               <span style={{ fontSize: '11px', color: '#6B7068', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Reports Ready</span>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: '#4F6848' }}>2 Ready</div>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: '#4F6848' }}>{reportsReady} Ready</div>
             </div>
             <div style={{ height: '24px', width: '1px', backgroundColor: '#DDDED7' }} />
 
             <div>
               <span style={{ fontSize: '11px', color: '#6B7068', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Completed</span>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: '#30432E' }}>4 Completed</div>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: '#30432E' }}>{completedOperations} Completed</div>
             </div>
           </div>
           <button 
@@ -133,7 +143,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   TODAY'S FIELD OPERATIONS
                 </h2>
                 <div style={{ fontSize: '12px', color: '#6B7068' }}>
-                  Live spatial coverage · Field A (Potato, 4.8 ha) · Scan OP-0142 active (68%)
+                  {activeOperation ? `Live spatial coverage · ${activeOperation.fieldName} · ${activeOperation.id} active (${activeOperation.progressPercent}%)` : `${field.name} · ${field.crop} · ${field.areaHa.toFixed(2)} ha`}
                 </div>
               </div>
               <button 
@@ -144,18 +154,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </button>
             </div>
 
-            {/* Dominant MapLibre GL JS & Turf.js Spatial Map */}
-            <MapLibreSpatialMap 
-              zones={zones} 
-              selectedZoneId="Zone 27" 
-              showFlightPath={true}
-              height="380px"
-              onSelectZone={(zone) => {
-                if (zone.id === 'Zone 27') {
-                  onSelectField('FIELD-A');
-                }
-              }}
-            />
+            <div style={{ position:'relative',height:380,border:'1px solid #e3e5dc',borderRadius:10,overflow:'hidden' }}>
+              <OperationalMap mode="flight" field={field} zones={zones} onSelectZone={() => onSelectField(field.id)} />
+            </div>
 
             {/* Operational Quick Switcher below map */}
             <div style={{ marginTop: '14px', borderTop: '1px solid #EBECE6', paddingTop: '12px' }}>
@@ -163,7 +164,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 Active Drone Missions
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
-                {operations.map(op => (
+                {operations.slice(0, 3).map(op => (
                   <div
                     key={op.id}
                     onClick={() => onSelectOperation(op.id)}
@@ -229,12 +230,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#B64A43' }}>
-                    3 Findings Require Validation
+                    {pendingValidations} Finding{pendingValidations === 1 ? '' : 's'} Require Validation
                   </span>
                   <ChevronRight size={14} color="#B64A43" />
                 </div>
                 <div style={{ fontSize: '11px', color: '#6B7068', marginTop: '3px' }}>
-                  FND-027 (Zone 27, Field A): Visible crop stress detected with 91% confidence.
+                  {findings.find(finding => finding.status === 'Pending Validation')?.id ?? 'No pending findings'} · {findings.find(finding => finding.status === 'Pending Validation')?.findingType ?? 'All findings have been reviewed.'}
                 </div>
               </div>
 
@@ -251,12 +252,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#B8862D' }}>
-                    2 Urgent Farmer Requests
+                    {highPriorityRequests.length} Urgent Farmer Request{highPriorityRequests.length === 1 ? '' : 's'}
                   </span>
                   <ChevronRight size={14} color="#B8862D" />
                 </div>
                 <div style={{ fontSize: '11px', color: '#6B7068', marginTop: '3px' }}>
-                  REQ-1027 (Sunita Jadhav · Field D): Emergency pest concern reported.
+                  {highPriorityRequests[0] ? `${highPriorityRequests[0].id} (${highPriorityRequests[0].farmerName} · ${highPriorityRequests[0].fieldName}): ${highPriorityRequests[0].notes}` : 'No high-priority requests are waiting.'}
                 </div>
               </div>
 
@@ -273,12 +274,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#20231F' }}>
-                    1 Ground Inspection Recommended
+                    {inspectionZones.length} Ground Inspection{inspectionZones.length === 1 ? '' : 's'} Recommended
                   </span>
                   <ChevronRight size={14} color="#6B7068" />
                 </div>
                 <div style={{ fontSize: '11px', color: '#6B7068', marginTop: '3px' }}>
-                  Soil moisture sample required at 19.2184, 72.9781.
+                  {inspectionZones[0] ? `${inspectionZones[0].id}: ${inspectionZones[0].soilMoisture}% moisture · ${inspectionZones[0].gpsCoords}` : 'No ground checks are queued for this field.'}
                 </div>
               </div>
             </div>

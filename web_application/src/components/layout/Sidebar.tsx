@@ -1,11 +1,8 @@
 import React from 'react';
 import type { NavTab } from '../../types';
-import { 
-  Map, 
-  Radio, 
-  FileText, 
-  ShieldCheck,
-  Info
+import {
+  Activity, BarChart3, BookOpen, CloudSun, ClipboardCheck, FileText, History, Info,
+  LayoutDashboard, Map, Radio, RefreshCw, Settings2, ShieldCheck, Sprout, Store, Users, Plane
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -16,202 +13,69 @@ interface SidebarProps {
   onNavigatePath?: (path: string) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({
-  activeTab,
-  onNavigate,
-  pendingRequestsCount,
-  onNavigatePath
-}) => {
-  const missionNav = [
-    { id: 'fields' as NavTab, label: 'Mission Boundary Planner', icon: Map },
-    { id: 'operations' as NavTab, label: 'Drone Scan Operations', icon: Radio },
-    { id: 'requests' as NavTab, label: 'Field Scan Requests', icon: FileText, badge: pendingRequestsCount },
-  ];
+const groups: { title: string; items: { id: NavTab; label: string; icon: React.ElementType; badge?: 'requests' | 'validation' }[] }[] = [
+  { title: 'Workspace', items: [{ id: 'dashboard', label: 'Overview', icon: LayoutDashboard }] },
+  { title: 'Field operations', items: [
+    { id: 'requests', label: 'Scan requests', icon: FileText, badge: 'requests' },
+    { id: 'farmers', label: 'Farmers', icon: Users },
+    { id: 'fields', label: 'Fields & boundaries', icon: Map },
+    { id: 'soil-card', label: 'Soil Health Cards', icon: Sprout },
+  ] },
+  { title: 'Flight operations', items: [
+    { id: 'drones', label: 'Drone fleet', icon: Plane },
+    { id: 'active-flight', label: 'Active flight', icon: Radio },
+    { id: 'operations', label: 'Mission operations', icon: Activity },
+    { id: 'flight-history', label: 'Flight history', icon: History },
+  ] },
+  { title: 'Field intelligence', items: [
+    { id: 'validation', label: 'Ground validation', icon: ClipboardCheck, badge: 'validation' },
+    { id: 'recommendations', label: 'Recommendations', icon: ShieldCheck },
+    { id: 'reports', label: 'Field reports', icon: FileText },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'weather', label: 'Weather & alerts', icon: CloudSun },
+    { id: 'stores', label: 'Nearby agri-stores', icon: Store },
+    { id: 'library', label: 'Crop reference', icon: BookOpen },
+  ] },
+  { title: 'System', items: [
+    { id: 'sync', label: 'Sync & data health', icon: RefreshCw },
+    { id: 'activity', label: 'Activity log', icon: Activity },
+    { id: 'settings', label: 'Settings', icon: Settings2 },
+  ] },
+];
 
-  const renderNavItem = (item: { id: NavTab; label: string; icon: React.ElementType; badge?: number }) => {
-    const Icon = item.icon;
-    const isActive = activeTab === item.id || 
-      (item.id === 'fields' && activeTab === 'field-details') ||
-      (item.id === 'operations' && activeTab === 'operation-details');
-
-    return (
-      <button
-        key={item.id}
-        onClick={() => onNavigate(item.id)}
-        style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '9px 12px',
-          borderRadius: '6px',
-          fontSize: '13px',
-          fontWeight: isActive ? 700 : 500,
-          color: isActive ? '#30432E' : '#555B52',
-          backgroundColor: isActive ? '#EBF0E9' : 'transparent',
-          borderLeft: isActive ? '3px solid #4F6848' : '3px solid transparent',
-          marginBottom: '4px',
-          transition: 'all 0.15s ease',
-          cursor: 'pointer'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Icon size={17} strokeWidth={1.8} color={isActive ? '#30432E' : '#6B7068'} />
-          <span>{item.label}</span>
-        </div>
-        {item.badge !== undefined && item.badge > 0 && (
-          <span 
-            style={{
-              fontSize: '10px',
-              fontWeight: 700,
-              backgroundColor: isActive ? '#4F6848' : '#DDDED7',
-              color: isActive ? '#FFFFFF' : '#20231F',
-              padding: '2px 7px',
-              borderRadius: '10px'
-            }}
-          >
-            {item.badge}
-          </span>
-        )}
-      </button>
-    );
-  };
-
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, pendingValidationCount, pendingRequestsCount, onNavigatePath }) => {
+  const badgeCount = (badge?: 'requests' | 'validation') => badge === 'requests' ? pendingRequestsCount : badge === 'validation' ? pendingValidationCount : 0;
   return (
-    <aside
-      style={{
-        width: '240px',
-        minWidth: '240px',
-        height: '100%',
-        backgroundColor: '#FFFFFF',
-        borderRight: '1px solid #DDDED7',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        userSelect: 'none'
-      }}
-    >
-      <div>
-        {/* Brand Header */}
-        <div 
-          style={{
-            padding: '18px 16px 16px 16px',
-            borderBottom: '1px solid #EBECE6',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px'
-          }}
-        >
-          <div 
-            style={{
-              width: '32px',
-              height: '32px',
-              backgroundColor: '#30432E',
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#FFFFFF',
-              fontWeight: 'bold',
-              fontSize: '14px',
-              boxShadow: '0 2px 6px rgba(48,67,46,0.3)'
-            }}
-          >
-            AS
-          </div>
-          <div>
-            <div style={{ fontSize: '15px', fontWeight: 800, color: '#20231F', lineHeight: 1.2 }}>
-              AgriSwarm
-            </div>
-            <div style={{ fontSize: '10px', color: '#4F6848', letterSpacing: '0.6px', fontWeight: 700 }}>
-              MISSION PLANNER WEB
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation Section */}
-        <div style={{ padding: '16px 12px' }}>
-          <div style={{ fontSize: '10px', fontWeight: 700, color: '#6B7068', letterSpacing: '0.8px', padding: '0 10px 8px 10px' }}>
-            PIXHAWK MISSION UPLOADER
-          </div>
-          {missionNav.map(renderNavItem)}
-
-          <div style={{ fontSize: '10px', fontWeight: 700, color: '#6B7068', letterSpacing: '0.8px', padding: '16px 10px 8px 10px' }}>
-            ABOUT
-          </div>
-          <button
-            onClick={() => {
-              if (onNavigatePath) {
-                onNavigatePath('/about');
-              } else {
-                window.location.assign('/about');
-              }
-            }}
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '9px 12px',
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: 500,
-              color: '#555B52',
-              backgroundColor: 'transparent',
-              borderLeft: '3px solid transparent',
-              marginBottom: '4px',
-              transition: 'all 0.15s ease',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#EBF0E9';
-              e.currentTarget.style.color = '#30432E';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#555B52';
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Info size={17} strokeWidth={1.8} color="#6B7068" />
-              <span>About AgriVyaan</span>
-            </div>
-          </button>
-        </div>
+    <aside className="app-sidebar">
+      <div className="app-sidebar-scroll">
+        <button className="app-brand" onClick={() => onNavigate('dashboard')} aria-label="AgriVyaan overview">
+          <span className="app-brand-mark"><Sprout size={19} strokeWidth={1.8} /></span>
+          <span className="app-brand-copy"><strong>AgriVyaan</strong><small>FIELD INTELLIGENCE</small></span>
+          <span className="app-brand-status" title="Operator workspace"><span className="pulse-dot" /></span>
+        </button>
+        <nav className="app-sidebar-nav" aria-label="Main navigation">
+          {groups.map(group => (
+            <section className="app-nav-group" key={group.title}>
+              <h2>{group.title}</h2>
+              {group.items.map(item => {
+                const Icon = item.icon;
+                const active = activeTab === item.id || (item.id === 'fields' && activeTab === 'field-details') || (item.id === 'operations' && activeTab === 'operation-details');
+                const count = badgeCount(item.badge);
+                return <button key={item.id} className={`app-nav-item${active ? ' is-active' : ''}`} aria-current={active ? 'page' : undefined} onClick={() => onNavigate(item.id)}>
+                  <Icon size={16} strokeWidth={1.8} /><span className="app-nav-label">{item.label}</span>{count > 0 && <span className="app-nav-badge">{count}</span>}
+                </button>;
+              })}
+            </section>
+          ))}
+          <section className="app-nav-group app-about-group">
+            <h2>Discover</h2>
+            <button className="app-nav-item" onClick={() => onNavigatePath ? onNavigatePath('/about') : window.location.assign('/about')}><Info size={16}/><span className="app-nav-label">About AgriVyaan</span></button>
+          </section>
+        </nav>
       </div>
-
-      {/* Bottom Operational Status */}
-      <div 
-        style={{
-          borderTop: '1px solid #EBECE6',
-          padding: '14px',
-          backgroundColor: '#FAFBF8'
-        }}
-      >
-        <div 
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '11px',
-            color: '#30432E',
-            backgroundColor: '#EBF0E9',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            border: '1px solid rgba(79, 104, 72, 0.2)'
-          }}
-        >
-          <span 
-            style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              backgroundColor: '#587451'
-            }}
-          />
-          <span style={{ fontWeight: 700 }}>Pixhawk Ready</span>
-          <ShieldCheck size={14} style={{ marginLeft: 'auto', color: '#4F6848' }} />
-        </div>
+      <div className="app-sidebar-footer">
+        <div className="app-connection-card"><span className="app-connection-icon"><ShieldCheck size={15}/></span><span><b>Operator workspace</b><small>Demo environment</small></span><span className="app-connection-dot"/></div>
+        <div className="app-sidebar-footnote">AGRIVYAAN <span>·</span> FIELD OPERATIONS</div>
       </div>
     </aside>
   );

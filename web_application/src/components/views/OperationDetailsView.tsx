@@ -1,10 +1,11 @@
 import React from 'react';
-import type { DroneOperation, ZoneData } from '../../types';
-import { MapLibreSpatialMap } from '../gis/MapLibreSpatialMap';
+import type { DroneOperation, FieldAsset, ZoneData } from '../../types';
+import { OperationalMap } from '../gis/OperationalMap';
 import { ChevronLeft, CheckCircle2, Circle } from 'lucide-react';
 
 interface OperationDetailsViewProps {
   operation: DroneOperation;
+  field: FieldAsset;
   zones: ZoneData[];
   onNavigateBack: () => void;
   onNavigateToValidation: () => void;
@@ -12,6 +13,7 @@ interface OperationDetailsViewProps {
 
 export const OperationDetailsView: React.FC<OperationDetailsViewProps> = ({
   operation,
+  field,
   zones,
   onNavigateBack,
   onNavigateToValidation
@@ -202,16 +204,13 @@ export const OperationDetailsView: React.FC<OperationDetailsViewProps> = ({
               </div>
             </div>
             <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#55758A', fontWeight: 600 }}>
-              LIVE PROGRESS: {operation.progressPercent}%
+              DEMO PROGRESS: {operation.progressPercent}%
             </span>
           </div>
 
-          <MapLibreSpatialMap 
-            zones={zones}
-            selectedZoneId="Zone 27"
-            showFlightPath={true}
-            height="460px"
-          />
+          <div style={{ position:'relative',height:460,borderRadius:10,overflow:'hidden' }}>
+            <OperationalMap mode="flight" field={field} zones={zones} />
+          </div>
         </div>
       </div>
     </div>

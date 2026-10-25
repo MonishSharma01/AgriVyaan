@@ -33,10 +33,10 @@ export const FieldsView: React.FC<FieldsViewProps> = ({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#20231F', margin: 0 }}>
-            Geographic Field Assets & Satellite Boundary Planner
+            Fields & boundaries
           </h1>
           <p style={{ fontSize: '13px', color: '#6B7068', marginTop: '2px' }}>
-            Draw boundaries on satellite imagery, measure area & perimeter with Turf.js, and export KML for Pixhawk Mission Planner.
+            Explore registered fields, trace verified boundaries, calculate area, and export field geometry for flight software.
           </p>
         </div>
       </div>
